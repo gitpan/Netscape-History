@@ -46,7 +46,7 @@ use Config;
 #-----------------------------------------------------------------------
 use vars qw($VERSION $HOME);
 
-$VERSION = '1.001';
+$VERSION = '1.002';
 
 #-----------------------------------------------------------------------
 #	Private Global Variables
@@ -56,8 +56,12 @@ $VERSION = '1.001';
 # The TEMPLATE parameter to use with unpack, when unpacking the visit
 # time for a URL. Used in next_url().
 #-----------------------------------------------------------------------
-my $UNPACK_TEMPLATE = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
+my $UNPACK_TEMPLATE    = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
 
+#-----------------------------------------------------------------------
+# The default path for the Netscape history.db database.
+#-----------------------------------------------------------------------
+my $DEFAULT_HISTORY_DB = "$HOME/.netscape/history.db";
 
 #=======================================================================
 
@@ -66,7 +70,17 @@ my $UNPACK_TEMPLATE = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
     $history = new Netscape::History();
 
 This creates a new instance of the Netscape::History object class.
+You can optionally pass the path to the history database as an
+argument to the constructor, as in:
 
+    $history = new Netscape::History('/home/bob/.netscape/history.db');
+
+If you do not specify the file, then the constructor will use:
+
+    $HOME/.netscape/history.db
+
+If the Netscape history database does not exist, a warning message
+will be generated, and the constructor will return C<undef>.
 
 =cut
 
@@ -86,7 +100,23 @@ sub new
     #-------------------------------------------------------------------
     $object = bless {}, $class;
 
-    $db_filename = "$HOME/.netscape/history.db";
+    #-------------------------------------------------------------------
+    # If there's an argument, then we use that as the path to the
+    # history database, otherwise fall back on default.
+    #-------------------------------------------------------------------
+    if (@_ > 0)
+    {
+        $db_filename = shift;
+    }
+    else
+    {
+        $db_filename = $DEFAULT_HISTORY_DB;
+    }
+
+    #-------------------------------------------------------------------
+    # If there's an argument, then we use that as the path to the
+    # history database, otherwise fall back on default.
+    #-------------------------------------------------------------------
     if (-f $db_filename)
     {
 	tie %history, 'DB_File', $db_filename;

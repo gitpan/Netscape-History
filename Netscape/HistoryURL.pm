@@ -35,11 +35,11 @@ use URI::URL;
 #-----------------------------------------------------------------------
 #	Public Global Variables
 #-----------------------------------------------------------------------
-use vars qw($VERSION $AUTOLOAD %OVERLOAD);
+use vars qw($VERSION $AUTOLOAD);
 
 use overload '""' => 'as_string', 'fallback' => 1;
 
-$VERSION = '1.001';
+$VERSION = '1.002';
 
 
 #-----------------------------------------------------------------------
