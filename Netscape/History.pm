@@ -1,60 +1,10 @@
 #-----------------------------------------------------------------------
-
-=head1 NAME
-
-Netscape::History - object class for accessing Netscape history database
-
-=head1 SYNOPSIS
-
-    use Netscape::History;
-    
-    $history = new Netscape::History();
-    while (defined($url = $history->next_url() ))
-    {
-    }
-
-=cut
-
+# Netscape::History - interface to Netscape's history.db file
 #-----------------------------------------------------------------------
 
 package Netscape::History;
 require 5.004;
 use strict;
-
-#-----------------------------------------------------------------------
-
-=head1 DESCRIPTION
-
-The C<Netscape::History> module implements an object class for
-accessing the history database maintained by the Netscape web browser.
-The history database keeps a list of all URLs you have visited,
-and is used by Netscape to change the color of URLs which you have
-previously visited, for example.
-
-With this module, you can get at the URLs stored in a Netscape history
-file, delete URLs, and add new ones. With the associated
-C<Netscape::HistoryURL> module you can access the information which
-is associated with each URL.
-
-B<Please Note:> the database format for the browser history was changed
-with Netscape 4. Previously only the time of most recent visit was
-available; now you can also get at the time of your first visit,
-the number of visits, the title of the referenced page, and another value.
-
-=head2 PLEASE NOTE
-
-In version 2.00 of this module, you had to set the
-C<$Netscape::History::NETSCAPE_VERSION> variable
-to the major version number of the Netscape you were using,
-since there was a change in the information stored for each URL
-between versions 3 and 4.
-In a subsequent version we removed the need for the variable,
-thanks to a suggestion from Jimmy Aitken.
-
-Previously, setting the variable would silently do nothing,
-from this version onwards it will result in an error.
-
-=cut
 
 #-----------------------------------------------------------------------
 
@@ -69,7 +19,7 @@ use Carp;
 #-----------------------------------------------------------------------
 use vars qw($VERSION $HOME);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 #-----------------------------------------------------------------------
 #	Private Global Variables
@@ -89,40 +39,32 @@ my $DEFAULT_HISTORY_DB = "$HOME/.netscape/history.db";
 #-----------------------------------------------------------------------
 # The default Library for reading the Netscape history.db file.
 #-----------------------------------------------------------------------
-my $DEFAULT_DBLIB = "DB_File";
+my $DBLIB = 'DB_File';
 
 #=======================================================================
-
-=head2 CONSTRUCTOR
-
-    $history = new Netscape::History();
-
-This creates a new instance of the Netscape::History object class.
-You can optionally pass the path to the history database as an
-argument to the constructor, as in:
-
-    $history = new Netscape::History('/home/bob/.netscape/history.db');
-
-If you do not specify the file, then the constructor will use:
-
-    $HOME/.netscape/history.db
-
-If the Netscape history database does not exist, a warning message
-will be generated, and the constructor will return C<undef>.
-
-=cut
-
+#
+# import()
+#
+# handle the case where the module is used:
+#      use Netscape::History dblib => 
+#
 #=======================================================================
 sub import
 {
-    my($class,%arg) = @_;
-    if (exists $arg{dblib}) {
-	$DEFAULT_DBLIB = $arg{dblib};
-	eval "use $DEFAULT_DBLIB";
-	die if $@;
-    }
+    my $class = shift;
+    my %arg   = @_;
+
+    $DBLIB = $arg{dblib} if exists $arg{dblib};
+
+    eval "use $DBLIB";
+    die if $@;
 }
 
+#=======================================================================
+#
+# new() - constructor
+#
+#=======================================================================
 sub new
 {
     my $class   = shift;
@@ -157,7 +99,11 @@ sub new
     #-------------------------------------------------------------------
     if (-f $db_filename)
     {
-	tie %history, $DEFAULT_DBLIB, $db_filename;
+	if (not defined tie %history, $DBLIB, $db_filename)
+        {
+            carp "failed to tie to history database $db_filename: $!\n";
+            return undef;
+        }
 	$object->{'HISTORY'} = \%history;
     }
     else
@@ -169,61 +115,10 @@ sub new
     return $object;
 }
 
-#-----------------------------------------------------------------------
-
-=head1 METHODS
-
-The B<Netscape::History> class implements the following methods:
-
-=over
-
-=item *
-
-get_url - get a specific URL from your history
-
-=item *
-
-rewind - reset history database to first URL
-
-=item *
-
-next_url - get next URL from your history
-
-=item *
-
-delete_url - remove a URL from your history
-
-=item *
-
-add_url - add a URL to the history file
-
-=item *
-
-close - close the history database
-
-=back
-
-Each of the methods is described separately below.
-
-=cut
-
-#-----------------------------------------------------------------------
-
 #=======================================================================
-
-=head2 get_url - get a specific URL from your history
-
-    $url = $history->get_url( URL );
-
-This method is used to extract information about a specific URL
-from your history database.
-
-This method takes a URL (which could be just a text string,
-or an object of class URI::URL) and returns an instance
-of Netscape::HistoryURL.
-
-=cut
-
+#
+# get_url() - retrieve a specific URL from the history
+#
 #=======================================================================
 sub get_url
 {
@@ -239,21 +134,9 @@ sub get_url
 }
 
 #=======================================================================
-
-=head2 next_url - get the next URL from your history database
-
-    $url = $history->next_url();
-
-This method returns the next URL from your history database.
-If you want to process all URLs in the database, you
-should call the B<rewind> method before looping over all URLs.
-
-The URL returned is an instance of the Netscape::HistoryURL class,
-which works just like an instance of URI::URL, but provides an
-extra methods, as described in the documentation for Netscape::HistoryURL.
-
-=cut
-
+#
+# next_url() - retrieve the next URL from the history
+#
 #=======================================================================
 sub next_url
 {
@@ -283,12 +166,14 @@ sub next_url
 }
 
 #=======================================================================
+#
 # _nh_create_url() - internal function, used to create Netscape::HistoryURL
 #
 # This function is used to generate an instance of Netscape::HistoryURL,
 # using the information held in the history database. This function
 # encapsulates the handling of differences between the history DB format
 # with pre- and post-Netscape 4 versions.
+#
 #=======================================================================
 sub _nh_create_url
 {
@@ -311,29 +196,20 @@ sub _nh_create_url
         #---------------------------------------------------------------
         $title =~ s/\0$//;
 
-        return new Netscape::HistoryURL($url, $last, $first, $count, $expire,
+        return Netscape::HistoryURL->new($url, $last, $first, $count, $expire,
                                         $title);
     }
     else
     {
-        return new Netscape::HistoryURL($url, unpack($UNPACK_TEMPLATE,
-                                                     $info));
+        return Netscape::HistoryURL->new($url, unpack($UNPACK_TEMPLATE,
+                                                      $info));
     }
 }
 
 #=======================================================================
-
-=head2 delete_url - remove a URL from the history database
-
-    $history->delete_url($url);
-
-This method is used to remove a URL from your history database.
-The URL passed can be a simple text string with the URL,
-or an instance of Netscape::HistoryURL, URI::URL, or any other
-class which can be rendered into a string.
-
-=cut
-
+#
+# delete_url() - remove a URL from the history
+#
 #=======================================================================
 sub delete_url
 {
@@ -352,32 +228,9 @@ sub delete_url
 }
 
 #=======================================================================
-
-=head2 add_url - add a URL to the history database
-
-    $history->add_url( URL );
-
-This method is used to add a URL to a history database.
-This might be useful if you are merging information from multiple
-history databases, for example.
-
-If the URL passed is an instance of Netscape::HistoryURL,
-then the information available will be stored.
-
-If the URL is specified as a text string, is derived from URI::URL,
-then a Netscape::HistoryURL will be created with the following:
-
-    LAST   = current time
-    FIRST  = current time
-    COUNT  = 1
-    EXPIRE = 1
-    TITLE  = ''
-
-If the EXPIRE field is not set to 1, then it won't appear
-in Netscape's history window. Not really sure why :-)
-
-=cut
-
+#
+# add_url() - add a new URL to the history
+#
 #=======================================================================
 sub add_url
 {
@@ -414,18 +267,9 @@ sub add_url
 }
 
 #=======================================================================
-
-=head2 rewind - reset internal URL pointer to first URL in history
-
-    $history->rewind();
-
-This method is used to move the history database's internal pointer
-to the first URL in your history database.
-You don't need to bother with this if you have just created the object,
-but it doesn't harm anything if you do.
-
-=cut
-
+#
+# rewind() - reset the pointer, used before next_url()
+#
 #=======================================================================
 sub rewind
 {
@@ -443,17 +287,9 @@ sub rewind
 }
 
 #=======================================================================
-
-=head2 close - close the history database
-
-    $history->close();
-
-This closes the history database. The destructor will do this automatically
-for you, so most of time you don't actually have to bother calling this
-method explicitly. Good programming style says you should though :-)
-
-=cut
-
+#
+# close() - close the history database
+#
 #=======================================================================
 sub close
 {
@@ -471,6 +307,11 @@ sub close
     $self->{'HISTORY'} = undef;
 }
 
+#=======================================================================
+#
+# DESTROY() - destructor, close the database if user hasn't already
+#
+#=======================================================================
 sub DESTROY
 {
     my $self = shift;
@@ -479,7 +320,167 @@ sub DESTROY
     $self->close() if defined $self->{'HISTORY'};
 }
 
-#-----------------------------------------------------------------------
+1;
+
+__END__
+
+=head1 NAME
+
+Netscape::History - object class for accessing Netscape history database
+
+=head1 SYNOPSIS
+
+    use Netscape::History;
+    
+    $history = new Netscape::History();
+    while (defined($url = $history->next_url() ))
+    {
+    }
+
+=head1 DESCRIPTION
+
+The C<Netscape::History> module implements an object class for
+accessing the history database maintained by the Netscape web browser.
+The history database keeps a list of all URLs you have visited,
+and is used by Netscape to change the color of URLs which you have
+previously visited, for example.
+
+With this module, you can get at the URLs stored in a Netscape history
+file, delete URLs, and add new ones. With the associated
+C<Netscape::HistoryURL> module you can access the information which
+is associated with each URL.
+
+B<Please Note:> the database format for the browser history was changed
+with Netscape 4. Previously only the time of most recent visit was
+available; now you can also get at the time of your first visit,
+the number of visits, the title of the referenced page, and another value.
+
+=head2 CONSTRUCTOR
+
+    $history = Netscape::History->new();
+
+This creates a new instance of the Netscape::History object class.
+You can optionally pass the path to the history database as an
+argument to the constructor, as in:
+
+    $history = Netscape::History->new('/home/bob/.netscape/history.db');
+
+If you do not specify the file, then the constructor will use:
+
+    $HOME/.netscape/history.db
+
+If the Netscape history database does not exist, a warning message
+will be generated, and the constructor will return C<undef>.
+
+=head1 METHODS
+
+The B<Netscape::History> class implements the following methods:
+
+=over
+
+=item *
+
+get_url - get a specific URL from your history
+
+=item *
+
+rewind - reset history database to first URL
+
+=item *
+
+next_url - get next URL from your history
+
+=item *
+
+delete_url - remove a URL from your history
+
+=item *
+
+add_url - add a URL to the history file
+
+=item *
+
+close - close the history database
+
+=back
+
+Each of the methods is described separately below.
+
+=head2 get_url - get a specific URL from your history
+
+    $url = $history->get_url( URL );
+
+This method is used to extract information about a specific URL
+from your history database.
+
+This method takes a URL (which could be just a text string,
+or an object of class URI::URL) and returns an instance
+of Netscape::HistoryURL.
+
+=head2 next_url - get the next URL from your history database
+
+    $url = $history->next_url();
+
+This method returns the next URL from your history database.
+If you want to process all URLs in the database, you
+should call the B<rewind> method before looping over all URLs.
+
+The URL returned is an instance of the Netscape::HistoryURL class,
+which works just like an instance of URI::URL, but provides an
+extra methods, as described in the documentation for Netscape::HistoryURL.
+
+
+=head2 delete_url - remove a URL from the history database
+
+    $history->delete_url($url);
+
+This method is used to remove a URL from your history database.
+The URL passed can be a simple text string with the URL,
+or an instance of Netscape::HistoryURL, URI::URL, or any other
+class which can be rendered into a string.
+
+
+=head2 add_url - add a URL to the history database
+
+    $history->add_url( URL );
+
+This method is used to add a URL to a history database.
+This might be useful if you are merging information from multiple
+history databases, for example.
+
+If the URL passed is an instance of Netscape::HistoryURL,
+then the information available will be stored.
+
+If the URL is specified as a text string, is derived from URI::URL,
+then a Netscape::HistoryURL will be created with the following:
+
+    LAST   = current time
+    FIRST  = current time
+    COUNT  = 1
+    EXPIRE = 1
+    TITLE  = ''
+
+If the EXPIRE field is not set to 1, then it won't appear
+in Netscape's history window. Not really sure why :-)
+
+
+=head2 rewind - reset internal URL pointer to first URL in history
+
+    $history->rewind();
+
+This method is used to move the history database's internal pointer
+to the first URL in your history database.
+You don't need to bother with this if you have just created the object,
+but it doesn't harm anything if you do.
+
+=head2 close - close the history database
+
+    $history->close();
+
+This closes the history database. The destructor will do this automatically
+for you, so most of time you don't actually have to bother calling this
+method explicitly. Good programming style says you should though :-)
+
 
 =head1 EXAMPLES
 
@@ -565,12 +566,8 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-1999 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997-2000 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =cut
-
-#-----------------------------------------------------------------------
-
-1;

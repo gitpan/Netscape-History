@@ -1,38 +1,10 @@
 #-----------------------------------------------------------------------
-
-=head1 NAME
-
-Netscape::HistoryURL - URI::URL subclass with Netscape history information
-
-=head1 SYNOPSIS
-
-    use Netscape::HistoryURL;
-    
-    $url = new Netscape::HistoryURL('http://foobar.com/',
-                                    LAST, FIRST, COUNT, EXPIRE, TITLE);
-
-=cut
-
+# Netscape::HistoryURL - interface to the info for a URL in history.db
 #-----------------------------------------------------------------------
 
 package Netscape::HistoryURL;
 require 5.004;
 use strict;
-
-#-----------------------------------------------------------------------
-
-=head1 DESCRIPTION
-
-The C<Netscape::HistoryURL> module subclasses L<URI::URL> to provide
-a URL class with methods for accessing the information which is stored
-in Netscape's I<history database>.
-
-The history database is used to keep track of all URLs you have visited.
-This is used to color previously visited URLs different, for example.
-The information stored in the history database depends on the version
-of Netscape being used.
-
-=cut
 
 #-----------------------------------------------------------------------
 
@@ -46,7 +18,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use overload '""' => 'as_string', 'fallback' => 1;
 
-$VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 
 #-----------------------------------------------------------------------
@@ -55,31 +27,9 @@ $VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 
 #=======================================================================
-
-=head1 CONSTRUCTOR
-
-    $object = new Netscape::HistoryURL( URL,
-                                        LAST, FIRST, COUNT, EXPIRE, TITLE );
-
-This creates a new instance of the Netscape::HistoryURL object class.
-This supports all the methods supported by the URI::URL class.
-Please see the documentation for that module.
-
-The first argument passed is a string which contains a valid URL.
-The remaining arguments are information (usually) extracted from Netscape's
-history database.
-
-B<LAST> is the time the URL was last visited, and B<FIRST> is the time
-when the URL was first visited. B<COUNT> is the number of times you
-have visited the URL. We're not really sure what B<EXPIRE> is yet.
-B<TITLE> is the title of the referenced page.
-
-You will normally not use the constructor yourself;
-it is usually invoked by the C<next_url()> method of the
-Netscape::History class.
-
-=cut
-
+#
+# new() - constructor
+#
 #=======================================================================
 sub new
 {
@@ -112,32 +62,12 @@ sub new
     return $object;
 }
 
-#-----------------------------------------------------------------------
-
-=head1 METHODS
-
-The B<Netscape::HistoryURL> class supports all methods of the URI::URL
-class, and additional methods as described below.
-Please see the documentation for URI::URL for details of
-the other methods supported.
-
-=cut
-
-#-----------------------------------------------------------------------
-
 
 #=======================================================================
-
-=head2 visit_time - return the time of last visit
-
-    $time = $url->visit_time();
-
-This routine is provided for backwards compatibility with the previous
-versions of this module. You should use C<last_visit_time()> instead.
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# visit_time() - return the time of last visit
+#
+#=======================================================================
 sub visit_time
 {
     my $self = shift;
@@ -147,100 +77,63 @@ sub visit_time
 }
 
 #=======================================================================
-
-=head2 first_visit_time - the time you first visited the URL
-
-    $time = $url->first_visit_time();
-
-This method returns the time you first visited the URL,
-in seconds since the last epoch.
-This can then be used with any of the standard routines for formatting
-as a string.
-The following example uses ctime(), from the Date::Format module:
-
-    print "Time of last visit for $url : ", ctime($url->first_visit_time);
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# first_visit_time() - the time you first visited the URL
+#
+#=======================================================================
 sub first_visit_time
 {
     return $_[0]->{FIRST_VISIT_TIME};
 }
 
 #=======================================================================
-
-=head2 last_visit_time - the time you last visited the URL
-
-    $time = $url->last_visit_time();
-
-This method returns the time you last (most recently) visited the URL,
-in seconds since the last epoch.
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# last_visit_time() - the time you last visited the URL
+#
+#=======================================================================
 sub last_visit_time
 {
     return $_[0]->{LAST_VISIT_TIME};
 }
 
 #=======================================================================
-
-=head2 title - the title of the associated page
-
-    $title = $url->title();
-
-This method returns the title of the referenced page, if one
-was available. The value will be C<undef> otherwise.
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# title() - the title of the associated page
+#
+#=======================================================================
 sub title
 {
     return $_[0]->{TITLE};
 }
 
 #=======================================================================
-
-=head2 visit_count - the number of times you have visited the page
-
-    $count = $url->visit_count();
-
-This method returns the number of times you have visited the page.
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# visit_count() - the number of times you have visited the page
+#
+#=======================================================================
 sub visit_count
 {
     return $_[0]->{COUNT};
 }
 
 #=======================================================================
-
-=head2 expire - the expire value for the URL
-
-    $expire = $url->expire();
-
-This method returns the expire values which is stored for the URL.
-We don't know what this is for yet, or the right way to interpret it.
-
-=cut
-
-#-----------------------------------------------------------------------
+#
+# expire() - the expire value for the URL
+#
+#=======================================================================
 sub expire
 {
     return $_[0]->{EXPIRE};
 }
 
 #=======================================================================
+#
 # as_string() - render instance into a string
 #
 # We have overloaded string rendering, so that the URL appears as you'd
 # expect in a string. We can't just let the AUTOLOAD do this, since the
 # overloading seems to require the function exist in this file. Oh well.
+#
 #=======================================================================
 sub as_string
 {
@@ -251,6 +144,7 @@ sub as_string
 }
 
 #=======================================================================
+#
 # AUTOLOAD - redirect methods to the URI::URL instance
 #
 # The AUTOLOAD method is invoked whenever someone tries to invoke a
@@ -259,6 +153,7 @@ sub as_string
 #
 # We redirect the method to the instance of URI::URL which is camping
 # out inside the instance of Netscape::HistoryURL.
+#
 #=======================================================================
 sub AUTOLOAD
 {
@@ -272,7 +167,115 @@ sub AUTOLOAD
     return $self->{'URL'}->$method(@_);
 }
 
-#-----------------------------------------------------------------------
+1;
+
+__END__
+
+=head1 NAME
+
+Netscape::HistoryURL - URI::URL subclass with Netscape history information
+
+=head1 SYNOPSIS
+
+    use Netscape::HistoryURL;
+    
+    $url = new Netscape::HistoryURL('http://foobar.com/',
+                                    LAST, FIRST, COUNT, EXPIRE, TITLE);
+
+
+=head1 DESCRIPTION
+
+The C<Netscape::HistoryURL> module subclasses L<URI::URL> to provide
+a URL class with methods for accessing the information which is stored
+in Netscape's I<history database>.
+
+The history database is used to keep track of all URLs you have visited.
+This is used to color previously visited URLs different, for example.
+The information stored in the history database depends on the version
+of Netscape being used.
+
+
+=head1 CONSTRUCTOR
+
+    $object = new Netscape::HistoryURL( URL,
+                                        LAST, FIRST, COUNT, EXPIRE, TITLE );
+
+This creates a new instance of the Netscape::HistoryURL object class.
+This supports all the methods supported by the URI::URL class.
+Please see the documentation for that module.
+
+The first argument passed is a string which contains a valid URL.
+The remaining arguments are information (usually) extracted from Netscape's
+history database.
+
+B<LAST> is the time the URL was last visited, and B<FIRST> is the time
+when the URL was first visited. B<COUNT> is the number of times you
+have visited the URL. We're not really sure what B<EXPIRE> is yet.
+B<TITLE> is the title of the referenced page.
+
+You will normally not use the constructor yourself;
+it is usually invoked by the C<next_url()> method of the
+Netscape::History class.
+
+
+=head1 METHODS
+
+The B<Netscape::HistoryURL> class supports all methods of the URI::URL
+class, and additional methods as described below.
+Please see the documentation for URI::URL for details of
+the other methods supported.
+
+
+=head2 visit_time - return the time of last visit
+
+    $time = $url->visit_time();
+
+This routine is provided for backwards compatibility with the previous
+versions of this module. You should use C<last_visit_time()> instead.
+
+
+=head2 first_visit_time - the time you first visited the URL
+
+    $time = $url->first_visit_time();
+
+This method returns the time you first visited the URL,
+in seconds since the last epoch.
+This can then be used with any of the standard routines for formatting
+as a string.
+The following example uses ctime(), from the Date::Format module:
+
+    print "Time of last visit for $url : ", ctime($url->first_visit_time);
+
+=head2 last_visit_time - the time you last visited the URL
+
+    $time = $url->last_visit_time();
+
+This method returns the time you last (most recently) visited the URL,
+in seconds since the last epoch.
+
+
+=head2 title - the title of the associated page
+
+    $title = $url->title();
+
+This method returns the title of the referenced page, if one
+was available. The value will be C<undef> otherwise.
+
+
+=head2 visit_count - the number of times you have visited the page
+
+    $count = $url->visit_count();
+
+This method returns the number of times you have visited the page.
+
+
+=head2 expire - the expire value for the URL
+
+    $expire = $url->expire();
+
+This method returns the expire values which is stored for the URL.
+We don't know what this is for yet, or the right way to interpret it.
+
 
 =head1 SEE ALSO
 
@@ -296,12 +299,8 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-1999 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997-2000 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =cut
-
-#-----------------------------------------------------------------------
-
-1;
