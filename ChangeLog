@@ -1,0 +1,35 @@
+
+			ChangeLog for Netscape History modules
+
+
+2.00 rit + neilb 04-Sep-1997
+
+	The format of the database has changed - more information is stored
+	for each URL. Updated both modules to provide access to the new
+	info. The old method (visit_time()) is supported for backwards
+	compatibility.
+
+	You have to set $Netscape::History::NETSCAPE_VERSION to the
+	major version of the Netscape you're running, so that the modules
+	know how to interpret the history database entries.
+
+
+1.002 neilb 15-Feb-1997
+
+	The constructor now takes an optional argument: the full path for
+	the Netscape history database. If not specified, then it will
+	default to $HOME/.netscape/history.db. Suggested by Greg Paris.
+
+	Removed %OVERLOAD from the use vars qw() line in HistoryURL.pm
+
+
+1.001 neilb 30-Jan-1997
+
+	We were using the deprecated %OVERLOAD mechanism, which no longer
+	works with the most recent releases of Perl. Changed to use the
+	new mechanism, "use overload ...".
+
+
+1.000 neilb
+
+	First version

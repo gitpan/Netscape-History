@@ -31,6 +31,15 @@ The history database keeps a list of all URLs you have visited,
 and is used by Netscape to change the color of URLs which you have
 previously visited, for example.
 
+B<Please Note:> the database format for the browser history was changed
+with Netscape 4. Previously only the time of most recent visit was
+available; now you can also get at the time of your first visit,
+the number of visits, the title of the referenced page, and another value.
+
+Before you use this module you must set
+C<$Netscape::History::NETSCAPE_VERSION> to the major version number of
+the Netscape you are using. The default is 4.
+
 =cut
 
 #-----------------------------------------------------------------------
@@ -44,9 +53,10 @@ use Config;
 #-----------------------------------------------------------------------
 #	Public Global Variables
 #-----------------------------------------------------------------------
-use vars qw($VERSION $HOME);
+use vars qw($VERSION $HOME $NETSCAPE_VERSION);
 
-$VERSION = '1.000';
+$VERSION          = '2.00';
+$NETSCAPE_VERSION = 4;
 
 #-----------------------------------------------------------------------
 #	Private Global Variables
@@ -56,8 +66,12 @@ $VERSION = '1.000';
 # The TEMPLATE parameter to use with unpack, when unpacking the visit
 # time for a URL. Used in next_url().
 #-----------------------------------------------------------------------
-my $UNPACK_TEMPLATE = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
+my $UNPACK_TEMPLATE    = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
 
+#-----------------------------------------------------------------------
+# The default path for the Netscape history.db database.
+#-----------------------------------------------------------------------
+my $DEFAULT_HISTORY_DB = "$HOME/.netscape/history.db";
 
 #=======================================================================
 
@@ -66,7 +80,17 @@ my $UNPACK_TEMPLATE = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
     $history = new Netscape::History();
 
 This creates a new instance of the Netscape::History object class.
+You can optionally pass the path to the history database as an
+argument to the constructor, as in:
 
+    $history = new Netscape::History('/home/bob/.netscape/history.db');
+
+If you do not specify the file, then the constructor will use:
+
+    $HOME/.netscape/history.db
+
+If the Netscape history database does not exist, a warning message
+will be generated, and the constructor will return C<undef>.
 
 =cut
 
@@ -86,7 +110,23 @@ sub new
     #-------------------------------------------------------------------
     $object = bless {}, $class;
 
-    $db_filename = "$HOME/.netscape/history.db";
+    #-------------------------------------------------------------------
+    # If there's an argument, then we use that as the path to the
+    # history database, otherwise fall back on default.
+    #-------------------------------------------------------------------
+    if (@_ > 0)
+    {
+        $db_filename = shift;
+    }
+    else
+    {
+        $db_filename = $DEFAULT_HISTORY_DB;
+    }
+
+    #-------------------------------------------------------------------
+    # If there's an argument, then we use that as the path to the
+    # history database, otherwise fall back on default.
+    #-------------------------------------------------------------------
     if (-f $db_filename)
     {
 	tie %history, 'DB_File', $db_filename;
@@ -156,7 +196,12 @@ sub next_url
     my $self = shift;
 
     my $url;
-    my $time;
+    my $value;
+    my $last;
+    my $first;
+    my $count;
+    my $expire;
+    my $title;
 
 
     if (!defined $self->{'HISTORY'})
@@ -166,7 +211,7 @@ sub next_url
 	return undef;
     }
 
-    ($url, $time) = each %{ $self->{'HISTORY'} };
+    ($url, $value) = each %{ $self->{'HISTORY'} };
 
     return undef if !defined $url;
 
@@ -175,7 +220,18 @@ sub next_url
     #-------------------------------------------------------------------
     chop $url;
 
-    return new Netscape::HistoryURL($url, unpack($UNPACK_TEMPLATE, $time));
+    if ($NETSCAPE_VERSION >= 4)
+    {
+        ($last, $first, $count, $expire, $title) = unpack("LLLLa*", $value);
+
+        return new Netscape::HistoryURL($url, $last, $first, $count, $expire,
+                                        $title);
+    }
+    else
+    {
+        return new Netscape::HistoryURL($url, unpack($UNPACK_TEMPLATE,
+                                                     $value));
+    }
 }
 
 #=======================================================================
@@ -295,7 +351,12 @@ The Date::Format module is used to format the visit time.
     $history = new Netscape::History;
     while (defined($url = $history->next_url() ))
     {
-        print "$url : ", ctime($url->visit_time());
+        print "$url :\n";
+        print "    First  : ", ctime($url->first_visit_time());
+        print "    Last   : ", ctime($url->last_visit_time());
+        print "    Count  : ", $url->visit_count(), "\n";
+        print "    Expire : ", $url->expire(), "\n";
+        print "    Title  : ", $url->title(), "\n";
     }
     $history->close();
 
