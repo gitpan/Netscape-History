@@ -1,0 +1,12 @@
+
+			ChangeLog for Netscape History modules
+
+1.001 neilb 30-Jan-1997
+
+	We were using the deprecated %OVERLOAD mechanism, which no longer
+	works with the most recent releases of Perl. Changed to use the
+	new mechanism, "use overload ...".
+
+1.000 neilb
+
+	First version
