@@ -1,6 +1,6 @@
 
 		Netscape History Modules Distribution
-				v1.002
+				v1.000
 
 This distribution contains two modules which can be used to access
 the history database which is maintained by the Netscape Navigator
@@ -17,16 +17,6 @@ To install these modules, you should just have to run the following:
 
 	% perl Makefile.PL
 	% make install
-
-Both modules are documented using pod. When you "make install", you
-will get two man-pages: Netscape::History and Netscape::HistoryURL.
-You can also generate HTML using pod2html:
-
-	% pod2html History.pm HistoryURL.pm
-
-Please let us know if you experience any problems with these modules,
-or have any ideas for additions.
-
 
 Neil Bowers <neilb@cre.canon.co.uk>	Richard Taylor <rit@cre.canon.co.uk>
 
