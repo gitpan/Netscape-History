@@ -1,6 +1,16 @@
 
 			ChangeLog for Netscape History modules
 
+2.02 neilb 08-may-1998
+
+	Added a get_url() method to the Netscape::History module:
+	      $NHurl = $history->get_url( URL );
+	This was suggested by Dave Steiner <steiner@bakerst.rutgers.edu>.
+	Added a test-case to the test-suite.
+
+	Small tidy up to the documentation for the next_url() method,
+	which had a description based on an older version.
+
 2.01 neilb 22-mar-1998
 
 	Removed the need for the NETSCAPE_VERSION variable kludge.

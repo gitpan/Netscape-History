@@ -70,7 +70,7 @@ use Carp;
 #-----------------------------------------------------------------------
 use vars qw($VERSION $HOME $NETSCAPE_VERSION);
 
-$VERSION          = '2.01';
+$VERSION          = '2.02';
 $NETSCAPE_VERSION = 4;
 
 #-----------------------------------------------------------------------
@@ -166,6 +166,10 @@ The B<Netscape::History> class implements the following methods:
 
 =item *
 
+get_url - get a specific URL from your history
+
+=item *
+
 rewind - reset history database to first URL
 
 =item *
@@ -194,6 +198,35 @@ Each of the methods is described separately below.
 
 #=======================================================================
 
+=head2 get_url - get a specific URL from your history
+
+    $url = $history->get_url( URL );
+
+This method is used to extract information about a specific URL
+from your history database.
+
+This method takes a URL (which could be just a text string,
+or an object of class URI::URL) and returns an instance
+of Netscape::HistoryURL.
+
+=cut
+
+#=======================================================================
+sub get_url
+{
+    my $self    = shift;
+    my $texturl = shift;
+
+    my $value = $self->{'HISTORY'}->{"$texturl\0"};
+
+
+    return undef unless defined $value;
+
+    return _nh_create_url($texturl, $value);
+}
+
+#=======================================================================
+
 =head2 next_url - get the next URL from your history database
 
     $url = $history->next_url();
@@ -204,8 +237,7 @@ should call the B<rewind> method before looping over all URLs.
 
 The URL returned is an instance of the Netscape::HistoryURL class,
 which works just like an instance of URI::URL, but provides an
-extra method B<visit_time()>.
-This returns the time of your last visit to that URL.
+extra methods, as described in the documentation for Netscape::HistoryURL.
 
 =cut
 
@@ -216,11 +248,6 @@ sub next_url
 
     my $url;
     my $value;
-    my $last;
-    my $first;
-    my $count;
-    my $expire;
-    my $title;
 
 
     if (!defined $self->{'HISTORY'})
@@ -239,9 +266,32 @@ sub next_url
     #-------------------------------------------------------------------
     chop $url;
 
-    if (length($value) > 4)
+    return _nh_create_url($url, $value);
+}
+
+#=======================================================================
+# _nh_create_url() - internal function, used to create Netscape::HistoryURL
+#
+# This function is used to generate an instance of Netscape::HistoryURL,
+# using the information held in the history database. This function
+# encapsulates the handling of differences between the history DB format
+# with pre- and post-Netscape 4 versions.
+#=======================================================================
+sub _nh_create_url
+{
+    my $url  = shift;
+    my $info = shift;
+
+    my $last;
+    my $first;
+    my $count;
+    my $expire;
+    my $title;
+
+
+    if (length($info) > 4)
     {
-        ($last, $first, $count, $expire, $title) = unpack("LLLLa*", $value);
+        ($last, $first, $count, $expire, $title) = unpack("LLLLa*", $info);
 
         #---------------------------------------------------------------
         # The title has a trailing NULL which we don't want in the string
@@ -254,7 +304,7 @@ sub next_url
     else
     {
         return new Netscape::HistoryURL($url, unpack($UNPACK_TEMPLATE,
-                                                     $value));
+                                                     $info));
     }
 }
 

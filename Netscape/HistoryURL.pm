@@ -46,7 +46,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use overload '""' => 'as_string', 'fallback' => 1;
 
-$VERSION = '2.01';
+$VERSION = '2.02';
 
 
 #-----------------------------------------------------------------------

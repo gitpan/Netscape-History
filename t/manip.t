@@ -14,7 +14,7 @@ use constant TEST_TITLE      => 'perl home page';
 use constant TEST_COUNT      => 3;
 use constant TEST_EXPIRE     => 2;
 
-print "1..14\n";
+print "1..15\n";
 
 my $history;
 my $url;
@@ -204,6 +204,25 @@ else
 
 #-----------------------------------------------------------------------
 # TEST: 14
+# Get the  URL. We expect to get back non-null, and test as above.
+#-----------------------------------------------------------------------
+$url = $history->get_url(TESTURL);
+if (defined $url
+    && $url->first_visit_time == TEST_FIRST_TIME
+    && $url->last_visit_time == TEST_LAST_TIME
+    && $url->visit_count == TEST_COUNT
+    && $url->expire == TEST_EXPIRE
+    && $url->title eq TEST_TITLE)
+{
+    print "ok 14\n";
+}
+else
+{
+    print "not ok 14\n";
+}
+
+#-----------------------------------------------------------------------
+# TEST: 15
 # Delete the URL from the history. Rewind, get next url.
 # There shouldn't be any in there, so we expect to get back undef.
 #-----------------------------------------------------------------------
@@ -212,11 +231,11 @@ $history->rewind();
 $url = $history->next_url();
 if (not defined $url)
 {
-    print "ok 14\n";
+    print "ok 15\n";
 }
 else
 {
-    print "not ok 14\n";
+    print "not ok 15\n";
 }
 
 unlink FILENAME;
