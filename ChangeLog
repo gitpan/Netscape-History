@@ -1,6 +1,21 @@
 
 			ChangeLog for Netscape History modules
 
+3.00 neilb 2-august-1999
+
+	Folded in patch from Andreas Koenig <andreas.koenig@anima.de>,
+	which enables Netscape::History to work with Berkeley DB 2.
+
+	Removed the use vars for NETSCAPE_HISTORY. Trying to set it
+	will now result in a warning, assuming you're use'ing strict.
+
+	Switched to the VERSION hack to use the cvs Revision for
+	module version numbers. The VERSION of Netscape::History
+	is used as the distribution version.
+
+	Bumped revision up to 3.00, the change to work with DB 2
+	would seem to warrant this.
+
 2.02 neilb 08-may-1998
 
 	Added a get_url() method to the Netscape::History module:

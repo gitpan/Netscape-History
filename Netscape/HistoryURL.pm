@@ -46,7 +46,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use overload '""' => 'as_string', 'fallback' => 1;
 
-$VERSION = '2.02';
+$VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 
 #-----------------------------------------------------------------------
@@ -296,7 +296,7 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997,1998 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997-1999 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

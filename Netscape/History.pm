@@ -48,17 +48,16 @@ C<$Netscape::History::NETSCAPE_VERSION> variable
 to the major version number of the Netscape you were using,
 since there was a change in the information stored for each URL
 between versions 3 and 4.
-In this version we have removed the need for the variable,
+In a subsequent version we removed the need for the variable,
 thanks to a suggestion from Jimmy Aitken.
 
-For this release, setting the variable will silently do nothing,
-in future versions this will result in an error.
+Previously, setting the variable would silently do nothing,
+from this version onwards it will result in an error.
 
 =cut
 
 #-----------------------------------------------------------------------
 
-use DB_File;
 use Netscape::HistoryURL;
 use Env qw(HOME);
 use Config;
@@ -68,10 +67,9 @@ use Carp;
 #-----------------------------------------------------------------------
 #	Public Global Variables
 #-----------------------------------------------------------------------
-use vars qw($VERSION $HOME $NETSCAPE_VERSION);
+use vars qw($VERSION $HOME);
 
-$VERSION          = '2.02';
-$NETSCAPE_VERSION = 4;
+$VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 #-----------------------------------------------------------------------
 #	Private Global Variables
@@ -87,6 +85,11 @@ my $UNPACK_TEMPLATE    = ($Config{'byteorder'} eq '4321' ? 'V' : 'N');
 # The default path for the Netscape history.db database.
 #-----------------------------------------------------------------------
 my $DEFAULT_HISTORY_DB = "$HOME/.netscape/history.db";
+
+#-----------------------------------------------------------------------
+# The default Library for reading the Netscape history.db file.
+#-----------------------------------------------------------------------
+my $DEFAULT_DBLIB = "DB_File";
 
 #=======================================================================
 
@@ -110,6 +113,16 @@ will be generated, and the constructor will return C<undef>.
 =cut
 
 #=======================================================================
+sub import
+{
+    my($class,%arg) = @_;
+    if (exists $arg{dblib}) {
+	$DEFAULT_DBLIB = $arg{dblib};
+	eval "use $DEFAULT_DBLIB";
+	die if $@;
+    }
+}
+
 sub new
 {
     my $class   = shift;
@@ -144,7 +157,7 @@ sub new
     #-------------------------------------------------------------------
     if (-f $db_filename)
     {
-	tie %history, 'DB_File', $db_filename;
+	tie %history, $DEFAULT_DBLIB, $db_filename;
 	$object->{'HISTORY'} = \%history;
     }
     else
@@ -523,8 +536,15 @@ When you call the L<next_url> method, you are returned instances of this class.
 
 =item L<DB_File>
 
-The Netscape history file is just an Berkeley DB File,
-which we acess using the C<DB_File> module.
+The Netscape history file is just a Berkeley DB File,
+which we access using the C<DB_File> module. You can
+use a different DB_File compatible library (such as
+C<DB_File::SV185>) by running
+
+  use Netscape::History dblib => 'DB_File::SV185'
+
+in which case you are only depending on the specified
+library and not C<DB_File>.
 
 =item L<URI::URL>
 
@@ -545,7 +565,7 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997,1998 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997-1999 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
