@@ -18,7 +18,7 @@ Netscape::History - object class for accessing Netscape history database
 #-----------------------------------------------------------------------
 
 package Netscape::History;
-require 5.003;
+require 5.004;
 use strict;
 
 #-----------------------------------------------------------------------
@@ -31,14 +31,28 @@ The history database keeps a list of all URLs you have visited,
 and is used by Netscape to change the color of URLs which you have
 previously visited, for example.
 
+With this module, you can get at the URLs stored in a Netscape history
+file, delete URLs, and add new ones. With the associated
+C<Netscape::HistoryURL> module you can access the information which
+is associated with each URL.
+
 B<Please Note:> the database format for the browser history was changed
 with Netscape 4. Previously only the time of most recent visit was
 available; now you can also get at the time of your first visit,
 the number of visits, the title of the referenced page, and another value.
 
-Before you use this module you must set
-C<$Netscape::History::NETSCAPE_VERSION> to the major version number of
-the Netscape you are using. The default is 4.
+=head2 PLEASE NOTE
+
+In version 2.00 of this module, you had to set the
+C<$Netscape::History::NETSCAPE_VERSION> variable
+to the major version number of the Netscape you were using,
+since there was a change in the information stored for each URL
+between versions 3 and 4.
+In this version we have removed the need for the variable,
+thanks to a suggestion from Jimmy Aitken.
+
+For this release, setting the variable will silently do nothing,
+in future versions this will result in an error.
 
 =cut
 
@@ -48,6 +62,7 @@ use DB_File;
 use Netscape::HistoryURL;
 use Env qw(HOME);
 use Config;
+use Carp;
 
 
 #-----------------------------------------------------------------------
@@ -55,7 +70,7 @@ use Config;
 #-----------------------------------------------------------------------
 use vars qw($VERSION $HOME $NETSCAPE_VERSION);
 
-$VERSION          = '2.00';
+$VERSION          = '2.01';
 $NETSCAPE_VERSION = 4;
 
 #-----------------------------------------------------------------------
@@ -134,7 +149,7 @@ sub new
     }
     else
     {
-        warn "no history db found!\n";
+        carp "history file $db_filename not found!\n";
         return undef;
     }
 
@@ -160,6 +175,10 @@ next_url - get next URL from your history
 =item *
 
 delete_url - remove a URL from your history
+
+=item *
+
+add_url - add a URL to the history file
 
 =item *
 
@@ -220,9 +239,14 @@ sub next_url
     #-------------------------------------------------------------------
     chop $url;
 
-    if ($NETSCAPE_VERSION >= 4)
+    if (length($value) > 4)
     {
         ($last, $first, $count, $expire, $title) = unpack("LLLLa*", $value);
+
+        #---------------------------------------------------------------
+        # The title has a trailing NULL which we don't want in the string
+        #---------------------------------------------------------------
+        $title =~ s/\0$//;
 
         return new Netscape::HistoryURL($url, $last, $first, $count, $expire,
                                         $title);
@@ -262,6 +286,68 @@ sub delete_url
     }
 
     delete $self->{'HISTORY'}->{"$url\0"};
+}
+
+#=======================================================================
+
+=head2 add_url - add a URL to the history database
+
+    $history->add_url( URL );
+
+This method is used to add a URL to a history database.
+This might be useful if you are merging information from multiple
+history databases, for example.
+
+If the URL passed is an instance of Netscape::HistoryURL,
+then the information available will be stored.
+
+If the URL is specified as a text string, is derived from URI::URL,
+then a Netscape::HistoryURL will be created with the following:
+
+    LAST   = current time
+    FIRST  = current time
+    COUNT  = 1
+    EXPIRE = 1
+    TITLE  = ''
+
+If the EXPIRE field is not set to 1, then it won't appear
+in Netscape's history window. Not really sure why :-)
+
+=cut
+
+#=======================================================================
+sub add_url
+{
+    my $self = shift;
+    my $url  = shift;
+
+    my($first, $last, $count, $expire, $title);
+
+
+    if ($url->isa('Netscape::HistoryURL'))
+    {
+        #---------------------------------------------------------------
+        # It's of the expected class, so grab out the values we want.
+        #---------------------------------------------------------------
+        $first  = $url->first_visit_time();
+        $last   = $url->last_visit_time();
+        $count  = $url->visit_count();
+        $expire = $url->expire();
+        $title  = $url->title();
+    }
+    else
+    {
+        #---------------------------------------------------------------
+        # All we've got is the URL, so we put in sensible values for
+        # the remaining fields.
+        #---------------------------------------------------------------
+        $first  = $last = time();
+        $count  = 1;
+        $expire = 1;
+        $title  = '';
+    }
+    $self->{'HISTORY'}->{"$url\0"} = pack("LLLLa*", $last, $first, $count,
+                                          $expire, "$title\0");
 }
 
 #=======================================================================
@@ -332,7 +418,9 @@ sub DESTROY
 
 #-----------------------------------------------------------------------
 
-=head1 EXAMPLE PROGRAM
+=head1 EXAMPLES
+
+=head2 DISPLAY CONTENTS OF HISTORY
 
 The following example illustrates use of this module,
 and the B<visit_time()> method of the URLs returned.
@@ -360,6 +448,20 @@ The Date::Format module is used to format the visit time.
     }
     $history->close();
 
+=head2 MERGE TWO HISTORY FILES
+
+The following example illustrates use of the C<add_url> method
+to merge two history databases. We read all URLs from C<history2.db>,
+and merge them into C<history1.db>, overwriting any duplicates.
+
+    $history1 = new Netscape::History("history1.db");
+    $history2 = new Netscape::History("history2.db");
+    while (defined($url = $history2->next_url() ))
+    {
+        $history1->add_url($url);
+    }
+    $history1->close();
+    $history2->close();
 
 =head1 SEE ALSO
 
@@ -368,6 +470,11 @@ The Date::Format module is used to format the visit time.
 =item L<Netscape::HistoryURL>
 
 When you call the L<next_url> method, you are returned instances of this class.
+
+=item L<DB_File>
+
+The Netscape history file is just an Berkeley DB File,
+which we acess using the C<DB_File> module.
 
 =item L<URI::URL>
 
@@ -388,7 +495,7 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997,1998 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

@@ -1,6 +1,19 @@
 
 			ChangeLog for Netscape History modules
 
+2.01 neilb 22-mar-1998
+
+	Removed the need for the NETSCAPE_VERSION variable kludge.
+	Jimmy Aitken <jimmy@pyramid.com> pointed out that we can
+	just check the size of the data under each key, and determine
+	perl-URL whether it is using the pre-v4 or post-v4 format.
+
+	Added an add_url() method to Netscape::History, which can take
+	either a Netscape::HistoryURL, or a text URL (URI::URL as well).
+	This was suggested by Jarkko Hietaniemi
+	<jarkko.hietaniemi@research.nokia.com>.
+
+	Added a testsuite
 
 2.00 rit + neilb 04-Sep-1997
 
@@ -33,3 +46,4 @@
 1.000 neilb
 
 	First version
+

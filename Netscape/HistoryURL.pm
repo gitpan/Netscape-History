@@ -16,7 +16,7 @@ Netscape::HistoryURL - URI::URL subclass with Netscape history information
 #-----------------------------------------------------------------------
 
 package Netscape::HistoryURL;
-require 5.003;
+require 5.004;
 use strict;
 
 #-----------------------------------------------------------------------
@@ -46,7 +46,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use overload '""' => 'as_string', 'fallback' => 1;
 
-$VERSION = '2.00';
+$VERSION = '2.01';
 
 
 #-----------------------------------------------------------------------
@@ -56,7 +56,7 @@ $VERSION = '2.00';
 
 #=======================================================================
 
-=head2 CONSTRUCTOR
+=head1 CONSTRUCTOR
 
     $object = new Netscape::HistoryURL( URL,
                                         LAST, FIRST, COUNT, EXPIRE, TITLE );
@@ -296,7 +296,7 @@ Richard Taylor E<lt>rit@cre.canon.co.ukE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Canon Research Centre Europe. All rights reserved.
+Copyright (c) 1997,1998 Canon Research Centre Europe. All rights reserved.
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
